@@ -8,6 +8,7 @@ mod debug_host_fn;
 mod gas_optimizer;
 mod git_detector;
 mod ipc;
+mod repl;
 mod runner;
 mod source_map_cache;
 mod source_mapper;
@@ -21,6 +22,7 @@ use crate::source_mapper::SourceMapper;
 use crate::stack_trace::WasmStackTrace;
 use crate::types::*;
 use base64::Engine as _;
+use clap::{Parser, Subcommand};
 use soroban_env_host::xdr::{ReadXdr, WriteXdr};
 use soroban_env_host::{
     xdr::{Operation, OperationBody},
@@ -30,7 +32,30 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{self, Read};
+use std::path::PathBuf;
 use tracing_subscriber::{fmt, EnvFilter};
+
+#[derive(Debug, Parser)]
+#[command(name = "erst-sim")]
+#[command(about = "Soroban simulator and instruction-level REPL")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Run the JSON-over-stdin simulation flow.
+    Simulate,
+    /// Launch the interactive wasm debugger REPL.
+    Repl {
+        /// Path to the wasm module to inspect.
+        wasm: PathBuf,
+        /// Optional export/name/index to select on startup.
+        #[arg(long)]
+        function: Option<String>,
+    },
+}
 
 // Use types::SimulationRequest directly
 
@@ -334,7 +359,23 @@ fn categorize_events(events: &soroban_env_host::events::Events) -> Vec<Categoriz
 /// with valid `SimulationResponse` structures).
 fn main() {
     init_logger();
+    if std::env::args_os().nth(1).is_some() {
+        let cli = Cli::parse();
+        match cli.command.unwrap_or(Command::Simulate) {
+            Command::Simulate => run_simulation_from_stdin(),
+            Command::Repl { wasm, function } => {
+                if let Err(error) = repl::run_repl(&wasm, function.as_deref()) {
+                    eprintln!("{error}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        return;
+    }
+    run_simulation_from_stdin();
+}
 
+fn run_simulation_from_stdin() {
     tracing::info!(event = "simulator_started", "Simulator initializing...");
 
     let mut buffer = String::new();

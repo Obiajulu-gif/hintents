@@ -35,6 +35,24 @@ Debug an offline envelope from stdin (no RPC):
 ./erst debug < tx.xdr
 ```
 
+### Instruction-Level Simulator REPL
+
+The Rust simulator includes an interactive REPL for stepping through Wasm instructions one at a time.
+
+```bash
+cd simulator
+cargo run -- repl path/to/contract.wasm
+```
+
+Inside the REPL:
+
+- `step-inst` or `si` advances exactly one Wasm instruction.
+- `stack` shows the symbolic operand stack after each step.
+- `list-funcs` and `use <name|index>` switch between exported functions.
+- `where` shows the current instruction offset.
+
+If a sidecar source map exists at `path/to/contract.map.json`, the REPL shows the closest matching source line after each `step-inst`.
+
 ### Interactive Trace Viewer
 
 Launch an interactive terminal UI to explore transaction execution traces with search functionality.
