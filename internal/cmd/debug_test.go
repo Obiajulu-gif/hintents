@@ -195,6 +195,9 @@ func TestDebugCommand_Setup(t *testing.T) {
 	snapshots := debugCmd.Flags().Lookup("snapshots")
 	assert.NotNil(t, snapshots)
 	assert.Equal(t, "false", snapshots.DefValue)
+
+	exportDOT := debugCmd.Flags().Lookup("export-dot")
+	assert.NotNil(t, exportDOT)
 }
 
 func TestApplySimulationFeeMocks(t *testing.T) {

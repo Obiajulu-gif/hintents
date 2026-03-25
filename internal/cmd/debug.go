@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dotandev/hintents/internal/callgraph"
 	"github.com/dotandev/hintents/internal/config"
 	"github.com/dotandev/hintents/internal/debug"
 	"github.com/dotandev/hintents/internal/decenstorage"
@@ -72,6 +73,7 @@ var (
 	mockTimeFlag        int64
 	mockBaseFeeFlag     uint32
 	mockGasPriceFlag    uint64
+	exportDOTFlag       bool
 	asyncFlag           bool
 	asyncTimeoutFlag    int
 	loadSnapshotsFlag   string
@@ -631,6 +633,12 @@ Local WASM Replay Mode:
 			}
 		}
 
+		if exportDOTFlag {
+			if err := exportCallGraphDOTFile(txHash, lastSimResp); err != nil {
+				return err
+			}
+		}
+
 		// Analysis: Error Suggestions (Heuristic-based)
 		if len(lastSimResp.Events) > 0 {
 			suggestionEngine := decoder.NewSuggestionEngine()
@@ -927,6 +935,12 @@ func runLocalWasmReplayOnce(ctx context.Context, runner simulator.RunnerInterfac
 		fmt.Println(string(jsonBytes))
 	}
 
+	if exportDOTFlag {
+		if err := exportCallGraphDOTFile(localReplayExportBase(wasmPath), resp); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -1140,6 +1154,27 @@ func collectContractIDsFromDiagnosticEvents(events []simulator.DiagnosticEvent) 
 		}
 	}
 	return ids
+}
+
+func exportCallGraphDOTFile(baseName string, resp *simulator.SimulationResponse) error {
+	content, err := callgraph.ExportDOT(resp)
+	if err != nil {
+		return errors.WrapValidationError(fmt.Sprintf("failed to export DOT call graph: %v", err))
+	}
+
+	outputPath := baseName + ".callgraph.dot"
+	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+		return errors.WrapValidationError(fmt.Sprintf("failed to write DOT call graph: %v", err))
+	}
+
+	fmt.Printf("Call graph exported to %s\n", outputPath)
+	return nil
+}
+
+func localReplayExportBase(path string) string {
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext)
 }
 
 func printSimulationResult(network string, res *simulator.SimulationResponse) {
@@ -1429,6 +1464,7 @@ func init() {
 	debugCmd.Flags().BoolVar(&snapshotsFlag, "snapshots", false, "Enable simulator snapshot capture (default: disabled)")
 	debugCmd.Flags().Uint32Var(&mockBaseFeeFlag, "mock-base-fee", 0, "Override base fee (stroops) for local fee sufficiency checks")
 	debugCmd.Flags().Uint64Var(&mockGasPriceFlag, "mock-gas-price", 0, "Override gas price multiplier for local fee sufficiency checks")
+	debugCmd.Flags().BoolVar(&exportDOTFlag, "export-dot", false, "Export the simulated call graph as Graphviz DOT")
 	debugCmd.Flags().StringVar(&themeFlag, "theme", "", "Color theme override (dark, light, none)")
 	debugCmd.Flags().Int64Var(&mockTimeFlag, "mock-time", 0, "Override ledger timestamp for simulation (Unix seconds)")
 	debugCmd.Flags().Uint32Var(&protocolVersionFlag, "protocol-version", 0, "Override protocol version for simulation")
