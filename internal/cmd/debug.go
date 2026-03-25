@@ -480,6 +480,13 @@ Local WASM Replay Mode:
 					return errors.WrapSimulationFailed(err, "")
 				}
 				printSimulationResult(networkFlag, simResp)
+				// Print simulation budget usage if present
+				if simResp != nil && simResp.BudgetUsage != nil {
+					fmt.Printf("\nSimulation Budget Usage:\n")
+					fmt.Printf("  CPU Instructions: %d / %d (%.2f%%)\n", simResp.BudgetUsage.CPUInstructions, simResp.BudgetUsage.CPULimit, simResp.BudgetUsage.CPUUsagePercent)
+					fmt.Printf("  Memory Bytes: %d / %d (%.2f%%)\n", simResp.BudgetUsage.MemoryBytes, simResp.BudgetUsage.MemoryLimit, simResp.BudgetUsage.MemoryUsagePercent)
+					fmt.Printf("  Operations: %d\n", simResp.BudgetUsage.OperationsCount)
+				}
 				// Fetch contract bytecode on demand for any contract calls in the trace; cache via RPC client
 				if client != nil && simResp != nil && len(simResp.DiagnosticEvents) > 0 {
 					contractIDs := collectContractIDsFromDiagnosticEvents(simResp.DiagnosticEvents)
@@ -573,7 +580,19 @@ Local WASM Replay Mode:
 
 				simResp = primaryResult // Use primary for further analysis
 				printSimulationResult(networkFlag, primaryResult)
+				if primaryResult != nil && primaryResult.BudgetUsage != nil {
+					fmt.Printf("\nSimulation Budget Usage (%s):\n", networkFlag)
+					fmt.Printf("  CPU Instructions: %d / %d (%.2f%%)\n", primaryResult.BudgetUsage.CPUInstructions, primaryResult.BudgetUsage.CPULimit, primaryResult.BudgetUsage.CPUUsagePercent)
+					fmt.Printf("  Memory Bytes: %d / %d (%.2f%%)\n", primaryResult.BudgetUsage.MemoryBytes, primaryResult.BudgetUsage.MemoryLimit, primaryResult.BudgetUsage.MemoryUsagePercent)
+					fmt.Printf("  Operations: %d\n", primaryResult.BudgetUsage.OperationsCount)
+				}
 				printSimulationResult(compareNetworkFlag, compareResult)
+				if compareResult != nil && compareResult.BudgetUsage != nil {
+					fmt.Printf("\nSimulation Budget Usage (%s):\n", compareNetworkFlag)
+					fmt.Printf("  CPU Instructions: %d / %d (%.2f%%)\n", compareResult.BudgetUsage.CPUInstructions, compareResult.BudgetUsage.CPULimit, compareResult.BudgetUsage.CPUUsagePercent)
+					fmt.Printf("  Memory Bytes: %d / %d (%.2f%%)\n", compareResult.BudgetUsage.MemoryBytes, compareResult.BudgetUsage.MemoryLimit, compareResult.BudgetUsage.MemoryUsagePercent)
+					fmt.Printf("  Operations: %d\n", compareResult.BudgetUsage.OperationsCount)
+				}
 				diffResults(primaryResult, compareResult, networkFlag, compareNetworkFlag)
 			}
 			lastSimResp = simResp
