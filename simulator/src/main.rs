@@ -635,8 +635,9 @@ fn main() {
 
     match result {
         Ok(Ok(exec_logs)) => {
-            let (events, diagnostic_events): (Vec<String>, Vec<DiagnosticEvent>) =
-                match host.get_events() {
+            let (events, diagnostic_events): (Vec<String>, Vec<DiagnosticEvent>) = match host
+                .get_events()
+            {
                 Ok(evs) => {
                     let mut raw_events: Vec<String> = Vec::with_capacity(evs.0.len());
                     let diag_events: Vec<DiagnosticEvent> = (evs.0)
