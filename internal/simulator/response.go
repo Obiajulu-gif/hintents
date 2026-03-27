@@ -20,7 +20,7 @@ type SimulationResponse struct {
 	CategorizedEvents []CategorizedEvent   `json:"categorized_events,omitempty"`
 	ProtocolVersion   *uint32              `json:"protocol_version,omitempty"`
 	StackTrace        *WasmStackTrace      `json:"stack_trace,omitempty"`
-	SourceLocation    string               `json:"source_location,omitempty"`
+	SourceLocation    *SourceLocation      `json:"source_location,omitempty"`
 	WasmOffset        *uint64              `json:"wasm_offset,omitempty"`
 	LinearMemoryDump  string               `json:"linear_memory_dump,omitempty"`
 }

@@ -820,12 +820,13 @@ func runLocalWasmReplay() error {
 			printWasmBacktrace(resp.StackTrace)
 		}
 
-		if resp.SourceLocation != "" {
-			fmt.Printf("%s Top-level Location: %s\n", visualizer.Symbol("location"), resp.SourceLocation)
+		if resp.SourceLocation != nil {
+			fmt.Printf("%s Top-level Location: %s:%d\n", visualizer.Symbol("location"), resp.SourceLocation.File, resp.SourceLocation.Line)
+			displaySourceLocation(resp.SourceLocation)
 		}
 
 		// Fallback to WAT disassembly if source mapping is unavailable but we have an offset
-		if resp.SourceLocation == "" && resp.WasmOffset != nil {
+		if resp.SourceLocation == nil && resp.WasmOffset != nil {
 			fmt.Println()
 			wasmBytes, err := os.ReadFile(wasmPath)
 			if err == nil {
@@ -981,8 +982,9 @@ func printSimulationResult(network string, res *simulator.SimulationResponse) {
 	}
 
 	// Preserve top-level source location display for compatibility.
-	if res.SourceLocation != "" {
-		fmt.Printf("%s Location: %s\n", visualizer.Symbol("location"), res.SourceLocation)
+	if res.SourceLocation != nil {
+		fmt.Printf("%s Location: %s:%d\n", visualizer.Symbol("location"), res.SourceLocation.File, res.SourceLocation.Line)
+		displaySourceLocation(res.SourceLocation)
 	}
 
 	// Display budget usage if available
@@ -1192,6 +1194,12 @@ func printWasmBacktrace(trace *simulator.WasmStackTrace) {
 
 		fmt.Printf("  #%d %s%s\n", frame.Index, name, location)
 	}
+
+	// Show inline source context for the trap-site frame (index 0).
+	if len(trace.Frames) > 0 && trace.Frames[0].SourceLocation != nil {
+		displaySourceLocation(trace.Frames[0].SourceLocation)
+	}
+
 	fmt.Println()
 }
 
