@@ -156,7 +156,7 @@ func (v *InteractiveViewer) handleCommand(command string) bool {
 	switch cmd {
 	case "n", "next", "forward":
 		v.stepForward()
-	case "p", "prev", "back", "backward":
+	case "b", "p", "prev", "back", "backward":
 		v.stepBackward()
 	case "f", "filter":
 		v.cycleEventFilter()
@@ -560,7 +560,7 @@ func (v *InteractiveViewer) showHelp() {
 	fmt.Println(separator(termW))
 	fmt.Println("Navigation:")
 	fmt.Println("  n, next, forward        - Step forward")
-	fmt.Println("  p, prev, back           - Step backward")
+	fmt.Println("  b, p, prev, back        - Step backward")
 	fmt.Println("  j, jump <step>          - Jump to specific step")
 	fmt.Println()
 	fmt.Println("Display:")
