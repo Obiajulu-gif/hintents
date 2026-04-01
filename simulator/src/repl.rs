@@ -1,3 +1,6 @@
+// Copyright 2026 Erst Users
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
