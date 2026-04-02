@@ -19,7 +19,6 @@ import (
 
 	"github.com/dotandev/hintents/internal/config"
 	"github.com/dotandev/hintents/internal/decenstorage"
-	simtypes "github.com/dotandev/hintents/internal/types"
 	"github.com/dotandev/hintents/internal/decoder"
 	"github.com/dotandev/hintents/internal/errors"
 	"github.com/dotandev/hintents/internal/logger"
@@ -31,6 +30,7 @@ import (
 	"github.com/dotandev/hintents/internal/snapshot"
 	"github.com/dotandev/hintents/internal/telemetry"
 	"github.com/dotandev/hintents/internal/tokenflow"
+	simtypes "github.com/dotandev/hintents/internal/types"
 	"github.com/dotandev/hintents/internal/visualizer"
 	"github.com/dotandev/hintents/internal/wat"
 	"github.com/dotandev/hintents/internal/watch"
