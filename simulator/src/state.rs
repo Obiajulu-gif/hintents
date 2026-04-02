@@ -8,7 +8,7 @@
 //!
 //! The diffing subsection exposes [`diff_snapshots`] for comparing ledger snapshots.
 
-use std::collections::HashMap;
+use crate::snapshot::{self, LedgerSnapshot};
 
 /// Maximum snapshot size in bytes (10 MB).
 pub const MAX_SNAPSHOT_SIZE: usize = 10 * 1024 * 1024;
@@ -170,18 +170,11 @@ mod tests {
             capture_status_message(&SnapshotCaptureResult::Disabled),
             "Frame too large to capture"
         );
-//! State diffing utilities for Soroban ledger snapshots.
-//!
-//! This module exposes [`diff_snapshots`], which compares two [`LedgerSnapshot`]
-//! values and returns a [`StateDiff`] whose key vectors are encoded as
-//! human-readable lowercase hex strings.
+    }
+}
 
-use crate::snapshot::{self, LedgerSnapshot};
-
-/// Represents the computed difference between two ledger snapshots.
-///
-/// All key vectors contain lowercase hex strings derived from the raw XDR
-/// key bytes, making them easy to log, display, and compare.
+/// Represents the computed difference between two ledger snapshots,
+/// with keys encoded as lowercase hex strings.
 #[derive(Debug, Clone)]
 pub struct StateDiff {
     /// Keys present in `after` but absent from `before` (newly inserted entries).
@@ -192,30 +185,12 @@ pub struct StateDiff {
     pub deleted_keys: Vec<String>,
 }
 
-/// Computes the diff between two ledger snapshots.
+/// Computes the diff between two ledger snapshots, returning keys as hex strings.
 ///
-/// Internally delegates to [`crate::snapshot::diff_snapshots`] for the raw
-/// byte-level comparison, then converts every key to a lowercase hex string
-/// for human-readable output.
-///
-/// The key lists in the returned [`StateDiff`] are sorted lexicographically
-/// (inherited from the underlying implementation) so callers receive
-/// deterministic output regardless of [`HashMap`] iteration order.
-///
-/// # Arguments
-/// * `before` – Snapshot of ledger state before the transaction.
-/// * `after`  – Snapshot of ledger state after the transaction.
-///
-/// # Example
-/// ```ignore
-/// let diff = diff_snapshots(&before, &after);
-/// println!("inserted: {:?}", diff.new_keys);
-/// println!("modified: {:?}", diff.modified_keys);
-/// println!("deleted:  {:?}", diff.deleted_keys);
-/// ```
+/// Delegates to [`crate::snapshot::diff_snapshots`] for the raw comparison,
+/// then hex-encodes every key for human-readable output.
 pub fn diff_snapshots(before: &LedgerSnapshot, after: &LedgerSnapshot) -> StateDiff {
     let raw = snapshot::diff_snapshots(before, after);
-
     StateDiff {
         new_keys: raw.inserted.iter().map(hex::encode).collect(),
         modified_keys: raw.modified.iter().map(hex::encode).collect(),
