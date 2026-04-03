@@ -211,18 +211,19 @@ impl DebuggerSession {
 
     fn step_instruction(&mut self) -> Result<String, String> {
         let function = self.current_function();
+        let function_label = function.label.clone();
         let step = function
             .instructions
             .get(self.current_instruction)
             .cloned()
-            .ok_or_else(|| format!("{} is already complete", function.label))?;
+            .ok_or_else(|| format!("{} is already complete", function_label))?;
 
         let action_summary = step.action.apply(&mut self.stack);
         self.current_instruction += 1;
 
         let mut lines = vec![format!(
             "{} @ 0x{:x}: {}",
-            function.label, step.offset, step.opcode
+            function_label, step.offset, step.opcode
         )];
         if !action_summary.is_empty() {
             lines.push(format!("effect {}", action_summary));
@@ -284,7 +285,7 @@ impl ModuleDebugInfo {
                     }
                 }
                 Payload::ImportSection(reader) => {
-                    for import in reader {
+                    for import in reader.into_imports() {
                         let import = import.map_err(|error| {
                             format!("failed to parse wasm import section: {}", error)
                         })?;
