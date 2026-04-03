@@ -28,6 +28,7 @@ type InteractiveViewer struct {
 	hideStdLib  bool
 	trap        *TrapInfo
 	dwarfParser *dwarf.Parser
+	navHistory  *NavigatorHistory // undo stack for Ctrl+Z navigation
 	stateMu     sync.RWMutex
 	stateCache  map[int]*ExecutionState
 	fetching    map[int]bool
@@ -49,6 +50,7 @@ func NewInteractiveViewer(trace *ExecutionTrace) *InteractiveViewer {
 		reader:      bufio.NewReader(os.Stdin),
 		eventFilter: "",
 		filterCycle: []string{"", EventTypeTrap, EventTypeContractCall, EventTypeHostFunction, EventTypeAuth},
+		navHistory:  NewNavigatorHistory(),
 		stateCache:  make(map[int]*ExecutionState),
 		fetching:    make(map[int]bool),
 		fetchErr:    make(map[int]string),
@@ -69,6 +71,7 @@ func NewInteractiveViewerWithWASM(trace *ExecutionTrace, wasmData []byte) *Inter
 		reader:      bufio.NewReader(os.Stdin),
 		eventFilter: "",
 		filterCycle: []string{"", EventTypeTrap, EventTypeContractCall, EventTypeHostFunction, EventTypeAuth},
+		navHistory:  NewNavigatorHistory(),
 		stateCache:  make(map[int]*ExecutionState),
 		fetching:    make(map[int]bool),
 		fetchErr:    make(map[int]string),
@@ -192,17 +195,22 @@ func (v *InteractiveViewer) handleCommand(command string) bool {
 
 	switch cmd {
 	case "n", "next", "forward":
+		v.navHistory.Push(v.trace.CurrentStep)
 		v.stepForward()
 	case "b", "p", "prev", "back", "backward":
+		v.navHistory.Push(v.trace.CurrentStep)
 		v.stepBackward()
 	case "f", "filter":
 		v.cycleEventFilter()
 	case "j", "jump":
 		if len(parts) > 1 {
+			v.navHistory.Push(v.trace.CurrentStep)
 			v.jumpToStep(parts[1])
 		} else {
 			fmt.Println("Usage: jump <step_number>")
 		}
+	case "u", "undo":
+		v.undoNavigation()
 	case "s", "show", "state":
 		v.displayCurrentState()
 	case "r", "reconstruct":
@@ -228,6 +236,8 @@ func (v *InteractiveViewer) handleCommand(command string) bool {
 	case "q", "quit", "exit":
 		fmt.Printf("Goodbye! %s\n", visualizer.Symbol("wave"))
 		return true
+	case "0", "rewind":
+		v.rewindToStart()
 	case "y", "yank", "copy":
 		if len(parts) > 1 {
 			v.handleYank(parts[1:])
@@ -239,6 +249,45 @@ func (v *InteractiveViewer) handleCommand(command string) bool {
 	}
 
 	return false
+}
+
+// rewindToStart resets the viewer to step 0, clearing filters and search state.
+func (v *InteractiveViewer) rewindToStart() {
+	if len(v.trace.States) == 0 {
+		fmt.Printf("%s No states to rewind to\n", visualizer.Error())
+		return
+	}
+
+	v.trace.CurrentStep = 0
+	v.eventFilter = ""
+
+	state, err := v.trace.GetCurrentState()
+	if err != nil {
+		fmt.Printf("%s %s\n", visualizer.Error(), err)
+		return
+	}
+
+	fmt.Printf("%s Rewound to step 0\n", visualizer.Symbol("target"))
+	_ = state
+	v.displayCurrentState()
+}
+
+// undoNavigation pops the last navigation index from the history stack and jumps back.
+func (v *InteractiveViewer) undoNavigation() {
+	idx, ok := v.navHistory.Pop()
+	if !ok {
+		fmt.Printf("%s Nothing to undo\n", visualizer.Symbol("arrow_l"))
+		return
+	}
+
+	state, err := v.trace.JumpToStep(idx)
+	if err != nil {
+		fmt.Printf("%s %s\n", visualizer.Error(), err)
+		return
+	}
+
+	fmt.Printf("%s Undo: returned to step %d\n", visualizer.Symbol("arrow_l"), state.Step)
+	v.displayCurrentState()
 }
 
 // stepForward moves to the next step, respecting the event filter and hideStdLib toggle.
@@ -764,6 +813,8 @@ func (v *InteractiveViewer) showHelp() {
 	fmt.Println("  b, p, prev, back        - Step backward")
 	fmt.Println("  j, jump <step>          - Jump to specific step")
 	fmt.Println("  $, G                    - Jump to final instruction (last step)")
+	fmt.Println("  0, rewind               - Rewind to beginning (step 0)")
+	fmt.Println("  u, undo (Ctrl+Z)        - Undo last navigation step")
 	fmt.Println()
 	fmt.Println("Display:")
 	fmt.Println("  s, show, state          - Show current state")
