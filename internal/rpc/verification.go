@@ -129,6 +129,14 @@ func VerifyLedgerEntries(requestedKeys []string, returnedEntries []LedgerEntryRe
 		return nil
 	}
 
+	// Build a fast lookup map
+	returnedMap := make(map[string]LedgerEntryResult, len(returnedEntries))
+	for _, entry := range returnedEntries {
+		returnedMap[entry.Key] = entry
+	}
+
+	// Check that all requested keys are present in the response
+// 	for _, requestedKey := range requestedKeys {
 	for _, requestedKey := range requestedKeys {
 		// Verify the server returned an entry for this key.
 		// Because getLedgerEntriesAttempt indexes entries by the server-returned key
